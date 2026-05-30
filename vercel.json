@@ -1,6 +1,6 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "buildCommand": "npm install --include=dev && npm -w @pulseboard/shared-types run build && npm -w @pulseboard/shared-utils run build && npm -w @pulseboard/web run build",
+  "buildCommand": "npm install --include=dev && npm -w @pulseboard/shared-types run build && npm -w @pulseboard/shared-utils run build && cd apps/web && npx --no-install vite build",
   "outputDirectory": "apps/web/dist",
   "installCommand": "echo skipped — handled by buildCommand",
   "framework": null,
