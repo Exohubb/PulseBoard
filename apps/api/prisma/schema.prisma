@@ -1,0 +1,477 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  name         String
+  passwordHash String
+  avatarUrl    String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  workspaces        WorkspaceMember[]
+  refreshTokens     RefreshToken[]
+  auditLogs         AuditLog[]
+  createdIncidents  Incident[]        @relation("incidentCreator")
+  assignedIncidents Incident[]        @relation("incidentAssignee")
+  incidentUpdates   IncidentUpdate[]
+  apiKeys           ApiKey[]
+}
+
+model RefreshToken {
+  id        String    @id @default(cuid())
+  token     String    @unique
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime  @default(now())
+  revokedAt DateTime?
+
+  @@index([userId])
+  @@index([token])
+}
+
+model Workspace {
+  id          String   @id @default(cuid())
+  name        String
+  slug        String   @unique
+  description String?
+  logoUrl     String?
+  accentColor String   @default("#6366f1")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  members            WorkspaceMember[]
+  services           Service[]
+  incidents          Incident[]
+  alertChannels      AlertChannel[]
+  alertPolicies      AlertPolicy[]
+  statusPages        StatusPage[]
+  auditLogs          AuditLog[]
+  scannerRuns        ScannerRun[]
+  maintenanceWindows MaintenanceWindow[]
+  checkRuns          CheckRun[]
+  monitors           Monitor[]
+}
+
+model WorkspaceMember {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role        String    @default("member")
+  createdAt   DateTime  @default(now())
+
+  @@unique([workspaceId, userId])
+  @@index([userId])
+}
+
+model Service {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  name        String
+  slug        String
+  description String?
+  environment String    @default("production")
+  ownerTeam   String?
+  status      String    @default("pending")
+  tags        String    @default("[]")
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  monitors             Monitor[]
+  incidentServiceLinks IncidentServiceLink[]
+  statusPageComponents StatusPageComponent[]
+  maintenanceWindows   MaintenanceWindow[]
+
+  @@unique([workspaceId, slug])
+  @@index([workspaceId])
+  @@index([status])
+}
+
+model Monitor {
+  id                   String    @id @default(cuid())
+  workspaceId          String
+  workspace            Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  serviceId            String
+  service              Service   @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  type                 String
+  name                 String
+  active               Boolean   @default(true)
+  intervalSeconds      Int       @default(60)
+  timeoutMs            Int       @default(30000)
+  retryCount           Int       @default(3)
+  failureThreshold     Int       @default(3)
+  recoveryThreshold    Int       @default(3)
+  slowThresholdMs      Int       @default(1000)
+  incidentAutoCreate   Boolean   @default(true)
+  maintenanceMode      Boolean   @default(false)
+  lastRunAt            DateTime?
+  lastStatus           String?
+  consecutiveFailures  Int       @default(0)
+  consecutiveSuccesses Int       @default(0)
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+
+  httpConfig           MonitorHttpConfig?
+  wsConfig             MonitorWsConfig?
+  scanConfig           MonitorScanConfig?
+  checkRuns            CheckRun[]
+  incidentServiceLinks IncidentServiceLink[]
+  scannerRuns          ScannerRun[]
+  statusPageComponents StatusPageComponent[]
+  maintenanceWindows   MaintenanceWindow[]
+
+  @@index([workspaceId])
+  @@index([serviceId])
+  @@index([type])
+  @@index([active])
+  @@index([lastRunAt])
+}
+
+model MonitorHttpConfig {
+  id                String  @id @default(cuid())
+  monitorId         String  @unique
+  monitor           Monitor @relation(fields: [monitorId], references: [id], onDelete: Cascade)
+  url               String
+  method            String  @default("GET")
+  headers           String  @default("{}")
+  body              String?
+  expectedStatus    Int     @default(200)
+  expectedJsonPath  String?
+  expectedJsonValue String?
+  authType          String  @default("none")
+  authConfig        String  @default("{}")
+  followRedirects   Boolean @default(true)
+  sslStrict         Boolean @default(false)
+  regionLabel       String?
+}
+
+model MonitorWsConfig {
+  id                    String  @id @default(cuid())
+  monitorId             String  @unique
+  monitor               Monitor @relation(fields: [monitorId], references: [id], onDelete: Cascade)
+  url                   String
+  headers               String  @default("{}")
+  authType              String  @default("none")
+  authConfig            String  @default("{}")
+  connectTimeoutMs      Int     @default(5000)
+  expectWelcomeMessage  Boolean @default(false)
+  welcomeMatchType      String?
+  welcomeMatchValue     String?
+  subscribeMessage      String?
+  expectedResponseEvent String?
+  pingMessage           String?
+  heartbeatTimeoutMs    Int     @default(30000)
+}
+
+model MonitorScanConfig {
+  id                    String  @id @default(cuid())
+  monitorId             String  @unique
+  monitor               Monitor @relation(fields: [monitorId], references: [id], onDelete: Cascade)
+  url                   String
+  headers               String  @default("{}")
+  authType              String  @default("none")
+  authConfig            String  @default("{}")
+  scanMode              String  @default("passive")
+  maxDurationMs         Int     @default(30000)
+  maxMessages           Int     @default(50)
+  allowOriginChecks     Boolean @default(true)
+  allowSchemaFuzz       Boolean @default(false)
+  allowAuthChecks       Boolean @default(true)
+  allowRateLimitProbe   Boolean @default(true)
+  allowEventEnumProbe   Boolean @default(true)
+  allowPayloadSizeProbe Boolean @default(true)
+  legalAcknowledged     Boolean @default(false)
+  ownershipConfirmed    Boolean @default(false)
+}
+
+model CheckRun {
+  id                String    @id @default(cuid())
+  monitorId         String
+  monitor           Monitor   @relation(fields: [monitorId], references: [id], onDelete: Cascade)
+  workspaceId       String
+  workspace         Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  startedAt         DateTime  @default(now())
+  completedAt       DateTime?
+  durationMs        Int?
+  success           Boolean   @default(false)
+  statusCode        Int?
+  errorCode         String?
+  errorMessage      String?
+  latencyConnectMs  Int?
+  latencyTotalMs    Int?
+  responseSizeBytes Int?
+  availabilityState String    @default("pending")
+  rawMeta           String?
+
+  assertions CheckAssertion[]
+
+  @@index([monitorId, startedAt])
+  @@index([workspaceId, startedAt])
+  @@index([success])
+}
+
+model CheckAssertion {
+  id         String   @id @default(cuid())
+  checkRunId String
+  checkRun   CheckRun @relation(fields: [checkRunId], references: [id], onDelete: Cascade)
+  passed     Boolean
+  name       String
+  expected   String?
+  actual     String?
+}
+
+model Incident {
+  id               String    @id @default(cuid())
+  workspaceId      String
+  workspace        Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  title            String
+  slug             String
+  severity         String
+  status           String    @default("open")
+  source           String    @default("manual")
+  createdByUserId  String?
+  createdByUser    User?     @relation("incidentCreator", fields: [createdByUserId], references: [id])
+  assignedToUserId String?
+  assignedToUser   User?     @relation("incidentAssignee", fields: [assignedToUserId], references: [id])
+  startedAt        DateTime  @default(now())
+  resolvedAt       DateTime?
+  closedAt         DateTime?
+  impactSummary    String?
+  internalSummary  String?
+  publicSummary    String?
+  rootCause        String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  updates         IncidentUpdate[]
+  serviceLinks    IncidentServiceLink[]
+  alertDeliveries AlertDelivery[]
+
+  @@unique([workspaceId, slug])
+  @@index([workspaceId])
+  @@index([status])
+  @@index([severity])
+}
+
+model IncidentUpdate {
+  id              String   @id @default(cuid())
+  incidentId      String
+  incident        Incident @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+  type            String
+  message         String
+  internalOnly    Boolean  @default(false)
+  createdByUserId String?
+  createdByUser   User?    @relation(fields: [createdByUserId], references: [id])
+  meta            String?
+  createdAt       DateTime @default(now())
+
+  @@index([incidentId])
+}
+
+model IncidentServiceLink {
+  id         String   @id @default(cuid())
+  incidentId String
+  incident   Incident @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+  serviceId  String?
+  service    Service? @relation(fields: [serviceId], references: [id], onDelete: SetNull)
+  monitorId  String?
+  monitor    Monitor? @relation(fields: [monitorId], references: [id], onDelete: SetNull)
+  createdAt  DateTime @default(now())
+
+  @@index([incidentId])
+  @@index([serviceId])
+  @@index([monitorId])
+}
+
+model AlertChannel {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  type        String
+  name        String
+  enabled     Boolean   @default(true)
+  config      String
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  alertDeliveries AlertDelivery[]
+
+  @@index([workspaceId])
+}
+
+model AlertPolicy {
+  id              String    @id @default(cuid())
+  workspaceId     String
+  workspace       Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  name            String
+  enabled         Boolean   @default(true)
+  event           String
+  severity        String?
+  serviceTags     String    @default("[]")
+  alertChannelIds String    @default("[]")
+  cooldownMinutes Int       @default(5)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  alertDeliveries AlertDelivery[]
+
+  @@index([workspaceId])
+}
+
+model AlertDelivery {
+  id             String       @id @default(cuid())
+  alertPolicyId  String
+  alertPolicy    AlertPolicy  @relation(fields: [alertPolicyId], references: [id], onDelete: Cascade)
+  alertChannelId String
+  alertChannel   AlertChannel @relation(fields: [alertChannelId], references: [id], onDelete: Cascade)
+  incidentId     String?
+  incident       Incident?    @relation(fields: [incidentId], references: [id], onDelete: SetNull)
+  status         String       @default("pending")
+  attempts       Int          @default(0)
+  lastAttemptAt  DateTime?
+  lastError      String?
+  responseCode   Int?
+  responseBody   String?
+  createdAt      DateTime     @default(now())
+
+  @@index([alertPolicyId])
+  @@index([alertChannelId])
+  @@index([status])
+}
+
+model StatusPage {
+  id           String    @id @default(cuid())
+  workspaceId  String
+  workspace    Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  name         String
+  slug         String    @unique
+  logoUrl      String?
+  accentColor  String    @default("#6366f1")
+  introText    String?
+  published    Boolean   @default(false)
+  customDomain String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  components StatusPageComponent[]
+
+  @@index([workspaceId])
+  @@index([slug])
+}
+
+model StatusPageComponent {
+  id           String     @id @default(cuid())
+  statusPageId String
+  statusPage   StatusPage @relation(fields: [statusPageId], references: [id], onDelete: Cascade)
+  serviceId    String?
+  service      Service?   @relation(fields: [serviceId], references: [id], onDelete: SetNull)
+  monitorId    String?
+  monitor      Monitor?   @relation(fields: [monitorId], references: [id], onDelete: SetNull)
+  name         String
+  status       String     @default("up")
+  sortOrder    Int        @default(0)
+
+  @@index([statusPageId])
+}
+
+model MaintenanceWindow {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  serviceId   String?
+  service     Service?  @relation(fields: [serviceId], references: [id], onDelete: SetNull)
+  monitorId   String?
+  monitor     Monitor?  @relation(fields: [monitorId], references: [id], onDelete: SetNull)
+  title       String
+  description String?
+  startsAt    DateTime
+  endsAt      DateTime
+  createdAt   DateTime  @default(now())
+
+  @@index([workspaceId])
+  @@index([serviceId])
+  @@index([monitorId])
+}
+
+model AuditLog {
+  id          String     @id @default(cuid())
+  workspaceId String?
+  workspace   Workspace? @relation(fields: [workspaceId], references: [id], onDelete: SetNull)
+  userId      String?
+  user        User?      @relation(fields: [userId], references: [id], onDelete: SetNull)
+  action      String
+  entityType  String?
+  entityId    String?
+  meta        String?
+  ipAddress   String?
+  userAgent   String?
+  createdAt   DateTime   @default(now())
+
+  @@index([workspaceId])
+  @@index([userId])
+  @@index([action])
+  @@index([createdAt])
+}
+
+model ScannerRun {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  monitorId   String?
+  monitor     Monitor?  @relation(fields: [monitorId], references: [id], onDelete: SetNull)
+  startedAt   DateTime  @default(now())
+  completedAt DateTime?
+  score       Int?
+  verdict     String
+  summary     String?
+  meta        String?
+
+  findings ScannerFinding[]
+
+  @@index([workspaceId])
+  @@index([monitorId])
+}
+
+model ScannerFinding {
+  id                String     @id @default(cuid())
+  scannerRunId      String
+  scannerRun        ScannerRun @relation(fields: [scannerRunId], references: [id], onDelete: Cascade)
+  category          String
+  title             String
+  severity          String
+  status            String
+  evidence          String?
+  recommendation    String?
+  cweOwaspReference String?
+  meta              String?
+
+  @@index([scannerRunId])
+}
+
+model ApiKey {
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name        String
+  prefix      String
+  tokenHash   String    @unique
+  scopes      String    @default("read")
+  lastUsedAt  DateTime?
+  revokedAt   DateTime?
+  expiresAt   DateTime?
+  createdAt   DateTime  @default(now())
+
+  @@index([userId])
+  @@index([tokenHash])
+}

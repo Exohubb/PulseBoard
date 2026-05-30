@@ -1,0 +1,88 @@
+# Render Blueprint — one-click deploy for PulseBoard backend.
+# After connecting the repo, Render reads this file and provisions:
+#   - Postgres database
+#   - Redis (key-value)
+#   - Web service running the NestJS API
+#
+# Push this file to your repo, then on Render: New → Blueprint → pick the repo.
+
+databases:
+  - name: pulseboard-db
+    plan: free
+    databaseName: pulseboard
+    postgresMajorVersion: "16"
+
+services:
+  - type: keyvalue
+    name: pulseboard-redis
+    plan: free
+    ipAllowList: []
+
+  - type: web
+    name: pulseboard-api
+    runtime: node
+    plan: starter
+    region: oregon
+    branch: main
+    rootDir: .
+    buildCommand: |
+      npm install
+      npm -w @pulseboard/api exec prisma generate
+      npm -w @pulseboard/api run build
+      npm -w @pulseboard/api exec prisma migrate deploy
+    startCommand: npm -w @pulseboard/api run start:prod
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_EXPIRES_IN
+        value: 7d
+      - key: JWT_REFRESH_EXPIRES_IN
+        value: 30d
+      - key: DATABASE_URL
+        fromDatabase:
+          name: pulseboard-db
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: keyvalue
+          name: pulseboard-redis
+          property: connectionString
+      - key: SCHEDULER_TICK_INTERVAL_MS
+        value: "10000"
+      - key: SCHEDULER_LOCK_TTL_MS
+        value: "30000"
+      - key: SCANNER_MAX_DURATION_MS
+        value: "30000"
+      - key: SCANNER_MAX_MESSAGES
+        value: "50"
+      - key: SCANNER_MAX_PAYLOAD_SIZE
+        value: "1024"
+      - key: RATE_LIMIT_TTL_MS
+        value: "60000"
+      - key: RATE_LIMIT_MAX_REQUESTS
+        value: "100"
+      - key: CHECK_RETENTION_DAYS
+        value: "30"
+      - key: AUDIT_RETENTION_DAYS
+        value: "90"
+      # Set CORS_ORIGINS in the Render dashboard after Vercel gives you a URL.
+      # Example: https://pulseboard.vercel.app
+      - key: CORS_ORIGINS
+        sync: false
+      # Optional: set these in the dashboard if you want email/Slack alerts.
+      - key: SMTP_HOST
+        sync: false
+      - key: SMTP_PORT
+        sync: false
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASS
+        sync: false
+      - key: SMTP_FROM
+        sync: false
+      - key: SLACK_WEBHOOK_URL
+        sync: false

@@ -1,0 +1,45 @@
+{
+  "name": "pulseboard",
+  "version": "0.1.0",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "npm-run-all -p dev:api dev:web",
+    "dev:api": "npm -w @pulseboard/api run start:dev",
+    "dev:web": "npm -w @pulseboard/web run dev",
+    "build": "npm-run-all build:api build:web",
+    "build:api": "npm -w @pulseboard/api run build",
+    "build:web": "npm -w @pulseboard/web run build",
+    "typecheck": "npm-run-all -p typecheck:api typecheck:web",
+    "typecheck:api": "npm -w @pulseboard/api run typecheck",
+    "typecheck:web": "npm -w @pulseboard/web run typecheck",
+    "lint": "npm-run-all -p lint:api lint:web",
+    "lint:api": "npm -w @pulseboard/api run lint",
+    "lint:web": "npm -w @pulseboard/web run lint",
+    "format": "npm-run-all -p format:api format:web",
+    "format:api": "npm -w @pulseboard/api run format",
+    "format:web": "npm -w @pulseboard/web run format",
+    "test": "npm-run-all -p test:api test:web",
+    "test:api": "npm -w @pulseboard/api run test",
+    "test:web": "npm -w @pulseboard/web run test",
+    "test:e2e": "npm -w @pulseboard/api run test:e2e",
+    "db:migrate": "npm -w @pulseboard/api run db:migrate",
+    "db:seed": "npm -w @pulseboard/api run db:seed",
+    "db:studio": "npm -w @pulseboard/api run db:studio",
+    "docker:up": "docker-compose -f infra/docker-compose.yml up -d",
+    "docker:down": "docker-compose -f infra/docker-compose.yml down"
+  },
+  "devDependencies": {
+    "npm-run-all": "^4.1.5",
+    "typescript": "^5.4.5"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "dependencies": {
+    "@nestjs/config": "^4.0.4"
+  }
+}
