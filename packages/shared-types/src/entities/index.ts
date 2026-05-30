@@ -5,6 +5,9 @@ import type {
   MonitorStatus,
   IncidentSeverity,
   IncidentSource,
+  IncidentStatus,
+  IncidentUpdateType,
+  AlertPolicyEvent,
 } from '../enums';
 
 export interface User {
