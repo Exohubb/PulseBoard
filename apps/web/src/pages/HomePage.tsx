@@ -15,8 +15,14 @@ import {
   Cpu,
   GitBranch,
   ChevronDown,
+  Sun,
+  Moon,
+  Monitor as MonitorIcon,
 } from 'lucide-react';
 import { Button } from '../components/ui/Button';
+import { useThemeStore } from '../lib/theme-store';
+
+const GITHUB_URL = 'https://github.com/Exohubb/PulseBoard';
 
 /* ---------- helpers ---------- */
 
@@ -288,6 +294,7 @@ function FAQItem({ q, a }: { q: string; a: string }) {
 
 export function HomePage() {
   useScrollReveal();
+  const { theme, toggleTheme } = useThemeStore();
   const [scrolled, setScrolled] = useState(false);
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 8);
@@ -321,6 +328,26 @@ export function HomePage() {
             <a href="#faq" className="hover:text-gray-900 dark:hover:text-gray-200 transition-colors">FAQ</a>
           </nav>
           <div className="flex items-center gap-3">
+            <a
+              href={GITHUB_URL}
+              target="_blank"
+              rel="noreferrer"
+              aria-label="View on GitHub"
+              className="hidden sm:inline-flex items-center justify-center w-9 h-9 rounded-lg text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+              title="View on GitHub"
+            >
+              <Github className="h-5 w-5" />
+            </a>
+            <button
+              onClick={toggleTheme}
+              aria-label={`Switch theme (current: ${theme})`}
+              title={`Theme: ${theme}`}
+              className="inline-flex items-center justify-center w-9 h-9 rounded-lg text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+            >
+              {theme === 'light' && <Sun className="h-5 w-5" />}
+              {theme === 'dark' && <Moon className="h-5 w-5" />}
+              {theme === 'system' && <MonitorIcon className="h-5 w-5" />}
+            </button>
             <Link to="/login" className="hidden md:inline text-sm text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200">
               Sign in
             </Link>
@@ -591,7 +618,7 @@ export function HomePage() {
               </Button>
             </Link>
             <a
-              href="https://github.com/anthropics/claude-code"
+              href={GITHUB_URL}
               target="_blank"
               rel="noreferrer"
               className="inline-flex items-center gap-2 h-12 px-6 rounded-lg border border-white/30 hover:bg-white/10 transition-colors text-base font-medium"
