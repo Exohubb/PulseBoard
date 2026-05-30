@@ -18,9 +18,7 @@
     "forceConsistentCasingInFileNames": true,
     "noFallthroughCasesInSwitch": true,
     "paths": {
-      "@/*": ["src/*"],
-      "@pulseboard/shared-types": ["../../packages/shared-types/src"],
-      "@pulseboard/shared-utils": ["../../packages/shared-utils/src"]
+      "@/*": ["src/*"]
     }
   },
   "include": ["src/**/*", "prisma/**/*"],
