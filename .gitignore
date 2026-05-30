@@ -16,8 +16,11 @@ apps/*/.env.local
 dist/
 build/
 *.tsbuildinfo
-apps/*/dist/
-apps/*/build/
+apps/api/dist/
+apps/api/build/
+# apps/web/dist is INTENTIONALLY committed for Vercel deploy
+!apps/web/dist/
+!apps/web/dist/**
 
 # Prisma local DB (kept out of git)
 apps/api/prisma/dev.db
@@ -50,7 +53,6 @@ logs/
 .render-buildlogs
 
 # Vite
-apps/web/dist/
 apps/web/.vite/
 
 # Misc
