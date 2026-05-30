@@ -7,7 +7,7 @@
     "start": "node dist/src/main.js",
     "start:dev": "ts-node -r tsconfig-paths/register src/main.ts",
     "start:prod": "node dist/src/main.js",
-    "build": "node ../../node_modules/@nestjs/cli/bin/nest.js build",
+    "build": "npm exec nest -- build",
     "typecheck": "tsc --noEmit",
     "lint": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix",
     "format": "prettier --write \"src/**/*.ts\" \"apps/**/*.ts\"",
